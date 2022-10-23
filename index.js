@@ -55,6 +55,8 @@ const typeDefs = gql`
       street: String!
       city: String!
     ): Person
+
+    editNumber(name: String!, phone: String!): Person
   }
 `;
 
@@ -86,8 +88,22 @@ const resolvers = {
       persons.push(person);
       return person;
     },
+
+    editNumber: (root, args) => {
+      const personIndex = persons.findIndex((p) => p.name === args.name);
+      if (personIndex === -1) null;
+
+      const person = persons[personIndex];
+
+      const updatePerson = { ...person, phone: args.phone };
+      persons[personIndex] = updatePerson;
+      return updatePerson;
+    },
   },
 
+  /**
+   * custom properties in Person
+   */
   Person: {
     address: (root) => {
       return {
