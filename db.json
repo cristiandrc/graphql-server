@@ -1,21 +1,21 @@
 {
   "persons": [
     {
-      "name": "CristianV2",
+      "name": "Cristian",
       "phone": "0341234567",
       "street": "street Frontend",
       "city": "Colombia",
       "id": "213ddf32-23234-2324a-dc23423-"
     },
     {
-      "name": "DavidV2",
+      "name": "David",
       "phone": "034122344567",
       "street": "street FullStack",
       "city": "Colombia",
       "id": "213ddf32-23234-2324a-dc92833-"
     },
     {
-      "name": "RojasV2",
+      "name": "Rojas",
       "street": "street Testing",
       "city": "Colombia",
       "id": "213ddf32-98234-2324a-dc23423-"
