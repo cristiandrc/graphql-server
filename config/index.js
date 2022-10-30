@@ -3,6 +3,7 @@ dotenv.config();
 
 const config = {
   urlDb: process.env.URI_DB,
+  jwtSecretLogin: process.env.JWT_SECRET_LOGIN,
 };
 
 export default config;

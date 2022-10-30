@@ -1,6 +1,9 @@
 import { gql, ApolloServer, UserInputError } from "apollo-server";
+import config from "./config/index.js";
 import "./db.js";
 import Person from "./models/person";
+import User from "./models/user.js";
+import jwt from "jsonwebtoken";
 
 const typeDefs = gql`
   enum YesNo {
@@ -20,10 +23,21 @@ const typeDefs = gql`
     id: ID!
   }
 
+  type User {
+    username: String!
+    friends: [Person]!
+    id: ID!
+  }
+
+  type Token {
+    value: String!
+  }
+
   type Query {
     personCount: Int!
     allPersons(phone: YesNo): [Person]!
     findPerson(name: String!): Person
+    me: User
   }
 
   type Mutation {
@@ -35,6 +49,10 @@ const typeDefs = gql`
     ): Person
 
     editNumber(name: String!, phone: String!): Person
+
+    createUser(username: String!): User
+
+    login(username: String!, password: String!): Token
   }
 `;
 
@@ -72,6 +90,32 @@ const resolvers = {
       }
       return person;
     },
+
+    createUser: (root, args) => {
+      const user = new User({ username: args.username });
+      return user.save().catch((error) => {
+        throw new UserInputError(error.message, {
+          invalidArgs: args,
+        });
+      });
+    },
+
+    login: async (root, args) => {
+      const user = await User.findOne({ username: args.username });
+
+      if (!user || args.password !== "secret") {
+        throw new UserInputError("Wrong credentials");
+      }
+
+      const userForToken = {
+        username: user.username,
+        id: user._id,
+      };
+
+      return {
+        value: jwt.sign(userForToken, config.jwtSecretLogin),
+      };
+    },
   },
 
   /**
@@ -90,6 +134,7 @@ const resolvers = {
 const server = new ApolloServer({
   typeDefs,
   resolvers,
+  context: ({ req }) => {},
 });
 
 server.listen().then(({ url }) => {
