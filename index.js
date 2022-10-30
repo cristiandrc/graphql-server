@@ -1,29 +1,7 @@
 import { gql, ApolloServer, UserInputError } from "apollo-server";
 import { v1 as uuid } from "uuid";
-import axios from "axios";
-
-const persons = [
-  {
-    name: "Cristian",
-    phone: "0341234567",
-    street: "street Frontend",
-    city: "Colombia",
-    id: "213ddf32-23234-2324a-dc23423-",
-  },
-  {
-    name: "David",
-    phone: "034122344567",
-    street: "street FullStack",
-    city: "Colombia",
-    id: "213ddf32-23234-2324a-dc92833-",
-  },
-  {
-    name: "Rojas",
-    street: "street Testing",
-    city: "Colombia",
-    id: "213ddf32-98234-2324a-dc23423-",
-  },
-];
+import "./db.js";
+import Person from "./models/person";
 
 const typeDefs = gql`
   enum YesNo {
@@ -63,7 +41,7 @@ const typeDefs = gql`
 
 const resolvers = {
   Query: {
-    personCount: () => persons.length,
+    personCount: () => Person.collection.countDocuments(),
     allPersons: async (root, args) => {
       // const { data: personsFromRestApi } = await axios.get(
       //   "http://localhost:3000/persons"

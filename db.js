@@ -1,12 +1,10 @@
 import mongoose from "mongoose";
-import { config } from "./config";
+import config from "./config/index";
 
 mongoose
   .connect(config.urlDb, {
-    useNewUrlParcel: true,
+    useNewUrlParser: true,
     useUnifiedTopology: true,
-    useFindAndModify: false,
-    useCreateIndex: true,
   })
   .then(() => {
     console.log("connected to mongoDB");
