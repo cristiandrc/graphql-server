@@ -1,5 +1,4 @@
 import { gql, ApolloServer, UserInputError } from "apollo-server";
-import { v1 as uuid } from "uuid";
 import "./db.js";
 import Person from "./models/person";
 
@@ -43,43 +42,35 @@ const resolvers = {
   Query: {
     personCount: () => Person.collection.countDocuments(),
     allPersons: async (root, args) => {
-      // const { data: personsFromRestApi } = await axios.get(
-      //   "http://localhost:3000/persons"
-      // );
-      if (!args.phone) return persons;
+      if (!args.phone) return Person.find({});
 
-      const byPhone = (person) =>
-        args.phone === "YES" ? person.phone : !person.phone;
-
-      return persons.filter(byPhone);
+      return Person.find({ phone: { $exists: args.phone === "YES" } });
     },
-    findPerson: (root, args) => {
+    findPerson: async (root, args) => {
       const { name } = args;
-      return persons.find((person) => person.name === name);
+      return await Person.findOne({ name });
     },
   },
 
   Mutation: {
     addPerson: (root, args) => {
-      if (persons.find((p) => p.name === args.name)) {
-        throw new UserInputError("Name must be unique", {
-          invalidArgs: args.name,
-        });
-      }
-      const person = { ...args, id: uuid() };
-      persons.push(person);
-      return person;
+      const person = new Person({ ...args });
+      return person.save();
     },
 
-    editNumber: (root, args) => {
-      const personIndex = persons.findIndex((p) => p.name === args.name);
-      if (personIndex === -1) null;
+    editNumber: async (root, args) => {
+      const person = await Person.findOne({ name: args.name });
+      if (!person) return;
+      person.phone = args.phone;
 
-      const person = persons[personIndex];
-
-      const updatePerson = { ...person, phone: args.phone };
-      persons[personIndex] = updatePerson;
-      return updatePerson;
+      try {
+        await person.save();
+      } catch (error) {
+        throw new UserInputError(error.message, {
+          validateArgs: args,
+        });
+      }
+      return person;
     },
   },
 
