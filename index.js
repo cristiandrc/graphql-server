@@ -1,4 +1,9 @@
-import { gql, ApolloServer, UserInputError } from "apollo-server";
+import {
+  gql,
+  ApolloServer,
+  UserInputError,
+  AuthenticationError,
+} from "apollo-server";
 import config from "./config/index.js";
 import "./db.js";
 import Person from "./models/person";
@@ -38,6 +43,7 @@ const typeDefs = gql`
     allPersons(phone: YesNo): [Person]!
     findPerson(name: String!): Person
     me: User
+    allUsers: [User]!
   }
 
   type Mutation {
@@ -53,6 +59,8 @@ const typeDefs = gql`
     createUser(username: String!): User
 
     login(username: String!, password: String!): Token
+
+    addAsFriend(name: String!): User
   }
 `;
 
@@ -68,12 +76,29 @@ const resolvers = {
       const { name } = args;
       return await Person.findOne({ name });
     },
+    me: (root, args, context) => {
+      return context.currentUser;
+    },
+    allUsers: async (root, args, context) => {
+      const users = await User.find({}).populate("friends");
+      return users;
+    },
   },
 
   Mutation: {
-    addPerson: (root, args) => {
+    addPerson: async (root, args, context) => {
+      const { currentUser } = context;
+      if (!currentUser) throw new AuthenticationError("Not Authenticated");
       const person = new Person({ ...args });
-      return person.save();
+      try {
+        await person.save();
+        currentUser.friends = currentUser.friends.concat(person);
+        await currentUser.save();
+      } catch (error) {
+        throw new UserInputError(error.message, {
+          invalidArgs: args,
+        });
+      }
     },
 
     editNumber: async (root, args) => {
@@ -116,6 +141,22 @@ const resolvers = {
         value: jwt.sign(userForToken, config.jwtSecretLogin),
       };
     },
+
+    addAsFriend: async (root, args, context) => {
+      const { currentUser } = context;
+      if (!currentUser) throw new AuthenticationError("Not Authenticated");
+
+      const person = await Person.findOne({ name: args.name });
+
+      const nonFriendlyAlready = (personID) =>
+        !currentUser.friends.map((p) => p._id).includes(personID);
+      if (nonFriendlyAlready(person)) {
+        currentUser.friends = currentUser.friends.concat(person);
+        await currentUser.save();
+      }
+
+      return currentUser;
+    },
   },
 
   /**
@@ -134,7 +175,17 @@ const resolvers = {
 const server = new ApolloServer({
   typeDefs,
   resolvers,
-  context: ({ req }) => {},
+  context: async ({ req }) => {
+    const auth = req ? req.headers.authorization : null;
+    if (auth && auth.toLocaleLowerCase().startsWith("bearer ")) {
+      const token = auth.substring("7");
+      const decodedToken = jwt.verify(token, config.jwtSecretLogin);
+      const currentUser = await User.findById(decodedToken.id).populate(
+        "friends"
+      );
+      return { currentUser };
+    }
+  },
 });
 
 server.listen().then(({ url }) => {
